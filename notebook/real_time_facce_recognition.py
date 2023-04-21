@@ -1,8 +1,9 @@
+#顔認証を用いたスマートロック
 #opencvをインポートする
 import cv2
 #顔認証のためのモジュールをインポートする
 import face_recognition
-#GIOP用のモジュールと時間制御用のモジュールをインポート
+#GPIO用のモジュールと時間制御用のモジュールをインポート
 import RPi.GPIO as GPIO
 import time
 
@@ -19,6 +20,7 @@ for path in ["../Biden.jpg", "../Elon.jpg", "../Messi.jpg", "../Trump.jpg"]:
 known_face_encodings = []
 for known_face_img in known_face_imgs:
     encod = face_recognition.face_encodings(known_face_img)[0]
+    #リストに顔の特徴を入れる
     known_face_encodings.append(encod)
 
 #それぞれの画像の順番に名前のリストを作成
@@ -33,11 +35,14 @@ def boxes(img, locations, n):
         right *= 4
         bottom *= 4
         left *= 4
-
+        
+        #顔の周りを四角で囲む
         cv2.rectangle(img, (left, top), (right, bottom), (0,0,255), 2)
+        #名前を書く
         cv2.rectangle(img, (left,bottom-35), (right, bottom), (0,0,255), cv2.FILLED)
         font = cv2.FONT_HERSHEY_DUPLEX
         cv2.putText(img, i, (left + 6, bottom - 6), font, 1.0, (255,255,255),1)
+    #描いた画像を表示する
     cv2.imshow('Video', img)
     return
     
@@ -45,6 +50,8 @@ def boxes(img, locations, n):
 #ライブ映像を取得する
 video_capture = cv2.VideoCapture(0)
 
+
+#モータに関する設定
 #ポート番号を定義
 gp_out = 4
 #GPIOの設定
@@ -78,7 +85,7 @@ while True:
         result = face_recognition.compare_faces(known_face_encodings, unknown_encoding)
         
         if True in result:
-            #モータ制御をするために画像処理を一時停止
+            #マッチする人の顔がカメラに写っているとface_recognitionが反応し、Trueを何度も返してしまうため画像処理を一時停止する
             video_capture.release()
             first_match = result.index(True)
             #マッチした人の名前を取り出す
@@ -91,6 +98,7 @@ while True:
             servo.ChangeDutyCycle(7.25)
             time.sleep(0.5)
 
+            #モータの余計な動きを止めるため電圧を0Vにする
             servo.ChangeDutyCycle(0)
 
 
@@ -99,6 +107,7 @@ while True:
             #顔の特徴が一致するものがない場合、unknownと表示する
             name = "unknown"
         face_names.append(name)
+    
     #第1引数にライブ映像、第2引数に顔の位置、第3引数に人の名前のリストを渡す    
     boxes(frame, face_locations, face_names)
     
